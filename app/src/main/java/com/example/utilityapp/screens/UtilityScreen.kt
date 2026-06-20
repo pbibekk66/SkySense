@@ -1,8 +1,10 @@
 package com.example.utilityapp.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,7 +64,6 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
     var searchText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
-    val unit = if (useCelsius) "°C" else "°F"
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
@@ -166,15 +167,16 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
                 is WeatherUiState.Success -> {
                     WeatherCard(
                         city = state.city,
-                        country = state.country,
                         weather = state.weather,
                         useCelsius = useCelsius,
                         showFeelsLike = showFeelsLike,
                         showHumidity = showHumidity,
                         showWind = showWind
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
                     ForecastSection(weather = state.weather, useCelsius = useCelsius)
+                    Spacer(Modifier.height(12.dp))
+                    SmartAssistantSection(weather = state.weather)
                 }
             }
         }
@@ -182,9 +184,92 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
 }
 
 @Composable
+private fun SmartAssistantSection(weather: OpenMeteoResponse) {
+    val current = weather.currentWeather
+    val temp = current.temperature
+    val code = current.weatherCode
+    val wind = current.windspeed
+
+    // ... logic remains same ...
+    val clothing = when {
+        temp < 10 -> "Heavy winter gear is a must."
+        temp in 10.0..20.0 -> "A light jacket should be enough."
+        temp in 20.0..30.0 -> "T-shirts and shorts are ideal."
+        else -> "Stay cool with breathable clothing."
+    } + if (code in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99)) " ☂️" else ""
+
+    val waterIntake = if (temp > 25) "Drink ~3L of water." else "Drink ~2L of water."
+
+    val travelAdvice = when {
+        code in listOf(95, 96, 99) -> "Severe storms! Stay home."
+        code in listOf(65, 75, 82, 86) -> "Heavy rain/snow. Expect delays."
+        wind > 40 -> "High winds! Drive carefully."
+        code in listOf(45, 48) -> "Foggy. Drive slowly."
+        else -> "Perfect for travel!"
+    }
+
+    val isIndoorDay = code in listOf(51, 53, 55, 61, 63, 65, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99)
+
+    val moodMessage = when (code) {
+        0, 1 -> "Keep shining! ☀️"
+        in 2..3 -> "Find your own sunshine. ☁️"
+        in 45..48 -> "Stay calm and focused. 🌫️"
+        in 51..65, in 80..82 -> "Nature is refreshing. 🌧️"
+        in 71..77, in 85..86 -> "Winter magic! ❄️"
+        in 95..99 -> "Storms pass. Stay strong! ⛈️"
+        else -> "Make it amazing! 🌈"
+    }
+
+    val summary = buildString {
+        val tempDesc = when { temp > 28 -> "hot"; temp > 20 -> "warm"; temp > 10 -> "cool"; else -> "cold" }
+        append("Today is $tempDesc & ${weatherDesc(code).lowercase()}. ")
+        append(if (temp < 15) "Dress warm " else "Wear light ")
+        append("& ${if (isIndoorDay) "stay in." else "head out!"}")
+    }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Smart Assistant",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.weight(1f))
+            Text(moodMessage, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        }
+        Spacer(Modifier.height(8.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(summary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    MiniAssistantItem("👕", clothing)
+                    MiniAssistantItem("💧", waterIntake)
+                    MiniAssistantItem("🚗", travelAdvice)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniAssistantItem(emoji: String, text: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(90.dp)) {
+        Text(emoji, fontSize = 18.sp)
+        Text(text, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
 private fun WeatherCard(
     city: String,
-    country: String,
     weather: OpenMeteoResponse,
     useCelsius: Boolean,
     showFeelsLike: Boolean,
@@ -201,72 +286,68 @@ private fun WeatherCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(Brush.verticalGradient(gradientColors))
+            .border(
+                BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                RoundedCornerShape(20.dp)
+            )
             .height(intrinsicSize = IntrinsicSize.Min)
     ) {
-        // --- Animated Background Overlay ---
         WeatherAnimationBackground(code = code, windSpeed = current.windspeed)
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "$city, $country",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = city,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = weatherDesc(code),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${temp.toInt()}$unit",
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = weatherEmoji(code),
+                        fontSize = 32.sp
+                    )
+                }
+            }
 
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = "${weatherEmoji(code)}  ${weatherDesc(code)}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "${temp.toInt()}$unit",
-                fontSize = 72.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-
-            val minTemp = weather.daily.minTemps.firstOrNull() ?: 0.0
-            val maxTemp = weather.daily.maxTemps.firstOrNull() ?: 0.0
-            val displayMin = if (useCelsius) minTemp else (minTemp * 9/5) + 32
-            val displayMax = if (useCelsius) maxTemp else (maxTemp * 9/5) + 32
-
-            Text(
-                text = "↓ ${displayMin.toInt()}$unit  ↑ ${displayMax.toInt()}$unit",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f)
-            )
-
-            Spacer(Modifier.height(20.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (showFeelsLike) WeatherDetail("Feels like", "${temp.toInt()}$unit")
+            Column(horizontalAlignment = Alignment.End) {
+                if (showFeelsLike) MiniDetail("Feels like", "${temp.toInt()}$unit")
                 if (showHumidity) {
                     val humidity = weather.hourly.humidities.firstOrNull() ?: 0
-                    WeatherDetail("Humidity", "$humidity%")
+                    MiniDetail("Humidity", "$humidity%")
                 }
-                if (showWind) WeatherDetail("Wind", "${current.windspeed.toInt()} km/h")
-                
-                if (!showFeelsLike && !showHumidity && !showWind)
-                    Text("Enable details in Settings", color = Color.White.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                if (showWind) MiniDetail("Wind", "${current.windspeed.toInt()} km/h")
             }
         }
+    }
+}
+
+@Composable
+private fun MiniDetail(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(value, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+        Text(label, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall, fontSize = 9.sp)
     }
 }
 
@@ -400,14 +481,6 @@ private fun CityChip(city: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun WeatherDetail(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-        Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@Composable
 private fun ForecastSection(weather: OpenMeteoResponse, useCelsius: Boolean) {
     Text(
         text = "Next 24 Hours",
@@ -415,14 +488,14 @@ private fun ForecastSection(weather: OpenMeteoResponse, useCelsius: Boolean) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(6.dp))
     val hourlyTimes = weather.hourly.time.take(24)
     val hourlyTemps = weather.hourly.temperatures.take(24)
     val hourlyCodes = weather.hourly.weatherCodes.take(24)
     
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         itemsIndexed(hourlyTimes) { index, timeStr ->
             if (index % 3 == 0) {
