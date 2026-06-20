@@ -20,7 +20,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="SkySense"
+            android:label="Sky_Sense"
             android:theme="@style/Theme.UtilityApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
