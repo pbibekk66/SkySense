@@ -1,5 +1,5 @@
 package com.example.utilityapp.utils
-
+//language translation module for Nepali, English, chinese and HIndi
 object Translations {
     private val data = mapOf(
         "English" to mapOf(
