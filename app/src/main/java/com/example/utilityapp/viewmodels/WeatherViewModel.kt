@@ -32,6 +32,12 @@ class WeatherViewModel : ViewModel() {
     private val _showWind = MutableStateFlow(true)
     val showWind: StateFlow<Boolean> = _showWind
 
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode
+
+    private val _currentLanguage = MutableStateFlow("English")
+    val currentLanguage: StateFlow<String> = _currentLanguage
+
     // Cache last search so we can re-fetch when units toggle
     private var lastCitySearch: String = ""
     private var lastLocation: Pair<Double, Double>? = null
@@ -114,4 +120,6 @@ class WeatherViewModel : ViewModel() {
     fun toggleFeelsLike() { _showFeelsLike.value = !_showFeelsLike.value }
     fun toggleHumidity()  { _showHumidity.value  = !_showHumidity.value  }
     fun toggleWind()      { _showWind.value       = !_showWind.value      }
+    fun toggleDarkMode()  { _isDarkMode.value     = !_isDarkMode.value    }
+    fun setLanguage(language: String) { _currentLanguage.value = language }
 }

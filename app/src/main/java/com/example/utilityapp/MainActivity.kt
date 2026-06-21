@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.utilityapp.screens.SettingsScreen
 import com.example.utilityapp.screens.UtilityScreen
+import com.example.utilityapp.utils.Translations
 import com.example.utilityapp.ui.theme.UtilityAppTheme
 import com.example.utilityapp.viewmodels.WeatherViewModel
 
@@ -23,31 +24,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            UtilityAppTheme {
-                WeatherApp()
+            val weatherViewModel: WeatherViewModel = viewModel()
+            val isDarkMode by weatherViewModel.isDarkMode.collectAsState()
+            
+            UtilityAppTheme(darkTheme = isDarkMode) {
+                WeatherApp(weatherViewModel)
             }
         }
     }
 }
 
 @Composable
-fun WeatherApp() {
+fun WeatherApp(weatherViewModel: WeatherViewModel) {
     // Single shared ViewModel — both screens read the same state
-    val weatherViewModel: WeatherViewModel = viewModel()
+    val currentLang by weatherViewModel.currentLanguage.collectAsState()
     var selectedTab by remember { mutableStateOf("Utility") }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Weather") },
-                    label = { Text("Weather") },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text(Translations.getString("weather", currentLang)) },
                     selected = selectedTab == "Utility",
                     onClick = { selectedTab = "Utility" }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text(Translations.getString("settings", currentLang)) },
                     selected = selectedTab == "Settings",
                     onClick = { selectedTab = "Settings" }
                 )

@@ -1,5 +1,12 @@
 package com.example.utilityapp.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.utilityapp.viewmodels.WeatherViewModel
+import com.example.utilityapp.utils.Translations
 
 @Composable
 fun SettingsScreen(weatherViewModel: WeatherViewModel = viewModel()) {
@@ -18,17 +26,22 @@ fun SettingsScreen(weatherViewModel: WeatherViewModel = viewModel()) {
     val showFeelsLike by weatherViewModel.showFeelsLike.collectAsState()
     val showHumidity  by weatherViewModel.showHumidity.collectAsState()
     val showWind      by weatherViewModel.showWind.collectAsState()
+    val isDarkMode    by weatherViewModel.isDarkMode.collectAsState()
+    val currentLang   by weatherViewModel.currentLanguage.collectAsState()
 
     val context = LocalContext.current
+    val languages = listOf("English", "Nepali", "Chinese", "Hindi")
+    var showLangDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Settings",
+            text = Translations.getString("settings", currentLang),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -36,7 +49,7 @@ fun SettingsScreen(weatherViewModel: WeatherViewModel = viewModel()) {
         Spacer(Modifier.height(8.dp))
 
         // ── Temperature unit ──────────────────────────────────────────
-        SettingsGroupLabel("Temperature Unit")
+        SettingsGroupLabel(Translations.getString("temp_unit", currentLang))
 
         SettingsToggleRow(
             label = if (useCelsius) "Celsius (°C)" else "Fahrenheit (°F)",
@@ -50,7 +63,7 @@ fun SettingsScreen(weatherViewModel: WeatherViewModel = viewModel()) {
         Spacer(Modifier.height(16.dp))
 
         // ── Visible details ───────────────────────────────────────────
-        SettingsGroupLabel("Main Screen Details")
+        SettingsGroupLabel(Translations.getString("main_screen_details", currentLang))
         Text(
             text = "Choose which extra details appear on the weather card.",
             style = MaterialTheme.typography.bodySmall,
@@ -59,25 +72,84 @@ fun SettingsScreen(weatherViewModel: WeatherViewModel = viewModel()) {
         Spacer(Modifier.height(8.dp))
 
         SettingsToggleRow(
-            label = "Feels Like",
+            label = Translations.getString("feels_like", currentLang),
             description = "Show apparent temperature",
             checked = showFeelsLike,
             onCheckedChange = { weatherViewModel.toggleFeelsLike() }
         )
 
         SettingsToggleRow(
-            label = "Humidity",
+            label = Translations.getString("humidity", currentLang),
             description = "Show relative humidity percentage",
             checked = showHumidity,
             onCheckedChange = { weatherViewModel.toggleHumidity() }
         )
 
         SettingsToggleRow(
-            label = "Wind Speed",
-            description = "Show current wind speed in m/s",
+            label = Translations.getString("wind_speed", currentLang),
+            description = "Show current wind speed",
             checked = showWind,
             onCheckedChange = { weatherViewModel.toggleWind() }
         )
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
+
+        // ── Personalization ───────────────────────────────────────────
+        SettingsGroupLabel(Translations.getString("personalization", currentLang))
+        
+        SettingsToggleRow(
+            label = Translations.getString("night_mode", currentLang),
+            description = "Enable dark theme across the app",
+            checked = isDarkMode,
+            onCheckedChange = { weatherViewModel.toggleDarkMode() }
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showLangDialog = true }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(Translations.getString("app_language", currentLang), style = MaterialTheme.typography.bodyLarge)
+                Text(currentLang, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        if (showLangDialog) {
+            AlertDialog(
+                onDismissRequest = { showLangDialog = false },
+                title = { Text("Select Language") },
+                text = {
+                    Column {
+                        languages.forEach { lang ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        weatherViewModel.setLanguage(lang)
+                                        showLangDialog = false 
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = (lang == currentLang), onClick = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(lang)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showLangDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()

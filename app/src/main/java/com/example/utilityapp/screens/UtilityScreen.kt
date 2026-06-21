@@ -7,9 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.utilityapp.model.OpenMeteoResponse
 import com.example.utilityapp.model.WeatherUiState
+import com.example.utilityapp.utils.Translations
 import com.example.utilityapp.viewmodels.WeatherViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -60,6 +59,7 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
     val showFeelsLike by weatherViewModel.showFeelsLike.collectAsState()
     val showHumidity by weatherViewModel.showHumidity.collectAsState()
     val showWind by weatherViewModel.showWind.collectAsState()
+    val currentLang by weatherViewModel.currentLanguage.collectAsState()
 
     var searchText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -100,7 +100,7 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
                 OutlinedTextField(
                     value = searchText,
                     onValueChange = { searchText = it },
-                    label = { Text("Search Country, City") },
+                    label = { Text(Translations.getString("search_hint", currentLang)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -171,12 +171,13 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
                         useCelsius = useCelsius,
                         showFeelsLike = showFeelsLike,
                         showHumidity = showHumidity,
-                        showWind = showWind
+                        showWind = showWind,
+                        language = currentLang
                     )
                     Spacer(Modifier.height(8.dp))
-                    ForecastSection(weather = state.weather, useCelsius = useCelsius)
+                    ForecastSection(weather = state.weather, useCelsius = useCelsius, language = currentLang)
                     Spacer(Modifier.height(12.dp))
-                    SmartAssistantSection(weather = state.weather)
+                    SmartAssistantSection(weather = state.weather, language = currentLang)
                 }
             }
         }
@@ -184,7 +185,7 @@ fun UtilityScreen(weatherViewModel: WeatherViewModel = viewModel()) {
 }
 
 @Composable
-private fun SmartAssistantSection(weather: OpenMeteoResponse) {
+private fun SmartAssistantSection(weather: OpenMeteoResponse, language: String) {
     val current = weather.currentWeather
     val temp = current.temperature
     val code = current.weatherCode
@@ -220,17 +221,29 @@ private fun SmartAssistantSection(weather: OpenMeteoResponse) {
         else -> "Make it amazing! 🌈"
     }
 
-    val summary = buildString {
-        val tempDesc = when { temp > 28 -> "hot"; temp > 20 -> "warm"; temp > 10 -> "cool"; else -> "cold" }
-        append("Today is $tempDesc & ${weatherDesc(code).lowercase()}. ")
-        append(if (temp < 15) "Dress warm " else "Wear light ")
-        append("& ${if (isIndoorDay) "stay in." else "head out!"}")
+    val summary = when(language) {
+        "Nepali" -> {
+            val tempDesc = when { temp > 28 -> "तातो"; temp > 20 -> "न्यानो"; temp > 10 -> "चिसो"; else -> "धेरै चिसो" }
+            "आजको मौसम $tempDesc र ${weatherDesc(code)} छ। ${if (temp < 15) "न्यानो लुगा लगाउनुहोस्" else "हल्का लुगा लगाउनुहोस्"} र ${if (isIndoorDay) "घरभित्रै बस्नुहोस्।" else "बाहिर जानुहोस्!"}"
+        }
+        "Chinese" -> {
+            val tempDesc = when { temp > 28 -> "炎热"; temp > 20 -> "温暖"; temp > 10 -> "凉爽"; else -> "寒冷" }
+            "今天天气$tempDesc，${weatherDesc(code)}。${if (temp < 15) "注意保暖" else "穿轻便的衣服"}，${if (isIndoorDay) "建议室内活动。" else "享受户外活动吧！"}"
+        }
+        "Hindi" -> {
+            val tempDesc = when { temp > 28 -> "गर्म"; temp > 20 -> "सुहावना"; temp > 10 -> "ठंडा"; else -> "बहुत ठंडा" }
+            "आज मौसम $tempDesc और ${weatherDesc(code)} रहेगा। ${if (temp < 15) "गर्म कपड़े पहनें" else "हल्के कपड़े पहनें"} और ${if (isIndoorDay) "घर के अंदर रहें।" else "बाहर घूमने जाएं!"}"
+        }
+        else -> {
+            val tempDesc = when { temp > 28 -> "hot"; temp > 20 -> "warm"; temp > 10 -> "cool"; else -> "cold" }
+            "Today is $tempDesc & ${weatherDesc(code).lowercase()}. ${if (temp < 15) "Dress warm " else "Wear light "} & ${if (isIndoorDay) "stay in." else "head out!"}"
+        }
     }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Smart Assistant",
+                text = Translations.getString("smart_assistant", language),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -250,9 +263,9 @@ private fun SmartAssistantSection(weather: OpenMeteoResponse) {
                 Text(summary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MiniAssistantItem("👕", clothing)
-                    MiniAssistantItem("💧", waterIntake)
-                    MiniAssistantItem("🚗", travelAdvice)
+                    MiniAssistantItem("👕", clothing, Translations.getString("clothing", language))
+                    MiniAssistantItem("💧", waterIntake, Translations.getString("water", language))
+                    MiniAssistantItem("🚗", travelAdvice, Translations.getString("travel", language))
                 }
             }
         }
@@ -260,9 +273,10 @@ private fun SmartAssistantSection(weather: OpenMeteoResponse) {
 }
 
 @Composable
-private fun MiniAssistantItem(emoji: String, text: String) {
+private fun MiniAssistantItem(emoji: String, text: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(90.dp)) {
         Text(emoji, fontSize = 18.sp)
+        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         Text(text, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -274,7 +288,8 @@ private fun WeatherCard(
     useCelsius: Boolean,
     showFeelsLike: Boolean,
     showHumidity: Boolean,
-    showWind: Boolean
+    showWind: Boolean,
+    language: String
 ) {
     val current = weather.currentWeather
     val temp = if (useCelsius) current.temperature else (current.temperature * 9/5) + 32
@@ -332,12 +347,12 @@ private fun WeatherCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                if (showFeelsLike) MiniDetail("Feels like", "${temp.toInt()}$unit")
+                if (showFeelsLike) MiniDetail(Translations.getString("feels_like", language), "${temp.toInt()}$unit")
                 if (showHumidity) {
                     val humidity = weather.hourly.humidities.firstOrNull() ?: 0
-                    MiniDetail("Humidity", "$humidity%")
+                    MiniDetail(Translations.getString("humidity", language), "$humidity%")
                 }
-                if (showWind) MiniDetail("Wind", "${current.windspeed.toInt()} km/h")
+                if (showWind) MiniDetail(Translations.getString("wind_speed", language), "${current.windspeed.toInt()} km/h")
             }
         }
     }
@@ -481,9 +496,9 @@ private fun CityChip(city: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ForecastSection(weather: OpenMeteoResponse, useCelsius: Boolean) {
+private fun ForecastSection(weather: OpenMeteoResponse, useCelsius: Boolean, language: String) {
     Text(
-        text = "Next 24 Hours",
+        text = Translations.getString("next_24_hours", language),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(horizontal = 16.dp)
